@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0d0d0d">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <title>Cepret Bossing</title>
 
 <style>
@@ -160,9 +162,60 @@ button {
 <div class="grid" id="grid"></div>
 
 <script>
+
+
+const supabaseUrl = "https://nvwbebcnaofggyuvlpxx.supabase.co";
+const supabaseKey = "sb_publishable_mOKc8ZfLs7v5gnUq2SFGQQ_CnW752vN";
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+const CACHE_KEY = "l2m_boss_input";
+const ffaBosses = [
+"Dragon Beast","Orfen","Samuel","Mirror of Oblivion","Hisilrome",
+"Landor","Glaki","Flynt","Cabrio","Haff","Andras"
+].map(normalize);
+
+const notCounted = [
+"Tromba","Sarka","Chertuba","Matura","Pan Narod",
+"Talkin","Felis","Enkura","Basila"
+].map(normalize);
+
+
+let bosses = [];
+let filter = "all";
+let timerStarted = false; 
+let voices = [];
+
+/* DATABASE */
+async function saveSchedule(text) {
+  await supabase
+    .from("boss_schedule")
+    .delete(); // remove old
+
+  await supabase
+    .from("boss_schedule")
+    .insert([{ content: text }]);
+}
+
+async function loadSchedule() {
+  const { data } = await supabase
+    .from("boss_schedule")
+    .select("content")
+    .limit(1);
+
+  return data[0]?.content || "";
+}
+/* END DATABASE */
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const saved = await loadSchedule();
+  if (saved) {
+    document.getElementById("input").value = saved;
+    parse(saved);
+  }
+});
 
 window.addEventListener("load", () => {
   const cached = localStorage.getItem(CACHE_KEY);
@@ -196,23 +249,6 @@ function notifyBoss(title, body) {
 function isMobile() {
   return /android|iphone|ipad/i.test(navigator.userAgent);
 }
-
-const CACHE_KEY = "l2m_boss_input";
-const ffaBosses = [
-"Dragon Beast","Orfen","Samuel","Mirror of Oblivion","Hisilrome",
-"Landor","Glaki","Flynt","Cabrio","Haff","Andras"
-].map(normalize);
-
-const notCounted = [
-"Tromba","Sarka","Chertuba","Matura","Pan Narod",
-"Talkin","Felis","Enkura","Basila"
-].map(normalize);
-
-
-let bosses = [];
-let filter = "all";
-let timerStarted = false; 
-let voices = [];
 
 speechSynthesis.onvoiceschanged = () => {
   voices = speechSynthesis.getVoices();
@@ -285,6 +321,7 @@ function start() {
 
   bosses = [];
   const rawInput = document.getElementById("input").value;
+  saveSchedule(rawInput);
   
   // CLEAN THE INPUT FIRST
   const cleanedInput = cleanInput(rawInput);
@@ -435,3 +472,7 @@ function normalize(name) {
 
 </body>
 </html>
+
+<!-- 3CXxHuBJLTY9MK? -->
+ https://nvwbebcnaofggyuvlpxx.supabase.co
+ sb_publishable_mOKc8ZfLs7v5gnUq2SFGQQ_CnW752vN
