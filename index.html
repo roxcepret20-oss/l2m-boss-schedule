@@ -166,7 +166,7 @@ button {
 
 const supabaseUrl = "https://nvwbebcnaofggyuvlpxx.supabase.co";
 const supabaseKey = "sb_publishable_mOKc8ZfLs7v5gnUq2SFGQQ_CnW752vN";
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 const CACHE_KEY = "l2m_boss_input";
 const ffaBosses = [
 "Dragon Beast","Orfen","Samuel","Mirror of Oblivion","Hisilrome",
@@ -186,7 +186,7 @@ let voices = [];
 
 /* DATABASE */
 async function saveSchedule(text) {
-  const { error } = await supabase
+  const { error } = await sb
     .from("boss_schedule")
     .upsert(
       { id: 1, content: text },
@@ -197,7 +197,7 @@ async function saveSchedule(text) {
 }
 
 async function loadSchedule() {
-  const { data } = await supabase
+  const { data } = await sb
     .from("boss_schedule")
     .select("content")
     .limit(1);
