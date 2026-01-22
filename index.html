@@ -186,13 +186,14 @@ let voices = [];
 
 /* DATABASE */
 async function saveSchedule(text) {
-  await supabase
+  const { error } = await supabase
     .from("boss_schedule")
-    .delete(); // remove old
+    .upsert(
+      { id: 1, content: text },
+      { onConflict: "id" }
+    );
 
-  await supabase
-    .from("boss_schedule")
-    .insert([{ content: text }]);
+  if (error) console.error("Save failed:", error);
 }
 
 async function loadSchedule() {
