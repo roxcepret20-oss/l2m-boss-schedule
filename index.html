@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lineage2M Boss Alarm Grid</title>
+
+<style>
+body {
+  background:#0d0d0d;
+  color:#eee;
+  font-family: Arial, sans-serif;
+  padding:20px;
+}
+
+textarea {
+  width:100%;
+  height:220px;
+  background:#111;
+  color:#0f0;
+  border:1px solid #333;
+  padding:10px;
+}
+
+button {
+  padding:8px 14px;
+  margin:5px;
+  cursor:pointer;
+}
+
+.filters button {
+  background:#222;
+  color:#fff;
+  border:1px solid #444;
+}
+
+.filters button.active {
+  background:#0f6;
+  color:#000;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px,1fr));
+  gap:15px;
+  margin-top:20px;
+}
+
+.card {
+  background:#181818;
+  border:1px solid #333;
+  padding:12px;
+  border-radius:8px;
+  min-width: 108px;
+}
+
+.card.frost {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.06),
+    rgba(255,255,255,0.02)
+  );
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card.frost:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+/* FFA */
+.card.boss-ffa {
+  box-shadow:
+    0 0 25px rgba(255, 60, 60, 0.45),
+    0 12px 35px rgba(0,0,0,0.8);
+  border-color: rgba(255, 80, 80, 0.6);
+}
+
+/* Not Counted */
+.card.boss-nc {
+  box-shadow:
+    0 0 18px rgba(180, 180, 180, 0.35),
+    0 12px 30px rgba(0, 0, 0, 0.8);
+  border-color: rgba(200, 200, 200, 0.45);
+  background: linear-gradient(
+    135deg,
+    rgba(200, 200, 200, 0.06),
+    rgba(120, 120, 120, 0.02)
+  );
+}
+
+/* Other */
+.card.boss-other {
+  box-shadow:
+    0 0 24px rgba(60, 220, 140, 0.45),
+    0 12px 35px rgba(0, 0, 0, 0.75);
+  border-color: rgba(100, 240, 160, 0.55);
+  background: linear-gradient(
+    135deg,
+    rgba(80, 255, 170, 0.10),
+    rgba(30, 120, 80, 0.03)
+  );
+}
+
+.card h3 {
+  margin: 0 0 16px; /* Boss name → spawn time */
+}
+
+.card .spawn-time {
+  margin-bottom: 4px; /* Spawn time → countdown */
+}
+
+.countdown {
+  font-size:18px;
+  font-weight:bold;
+}
+
+.warn5 {
+  animation: glowPulse 1.6s infinite;
+}
+
+.warn1 {
+  animation: glowPulseFast 0.8s infinite;
+}
+
+@keyframes glowPulse {
+  0% { opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+@keyframes glowPulseFast {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>⚔️ Lineage2M Boss Alarm</h1>
+
+<textarea id="input" placeholder="Paste boss list here..."></textarea><br>
+<button onclick="start()">Parse & Start</button>
+
+<div class="filters">
+  <button class="active" onclick="setFilter('all')">All</button>
+  <button onclick="setFilter('ffa')">FFA Boss</button>
+  <button onclick="setFilter('nc')">Not Counted Boss</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+window.addEventListener("load", () => {
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) {
+    document.getElementById("input").value = cached;
+    start(); 
+  }
+});
+const CACHE_KEY = "l2m_boss_input";
+const ffaBosses = [
+"Dragon Beast","Orfen","Samuel","Mirror of Oblivion","Hisilrome",
+"Landor","Glaki","Flynt","Cabrio","Haff","Andras"
+].map(normalize);
+
+const notCounted = [
+"Tromba","Sarka","Chertuba","Matura","Pan Narod",
+"Talkin","Felis","Enkura","Basila"
+].map(normalize);
+
+
+let bosses = [];
+let filter = "all";
+let timerStarted = false; 
+let voices = [];
+
+speechSynthesis.onvoiceschanged = () => {
+  voices = speechSynthesis.getVoices();
+};
+
+function getVoice() {
+  if (!voices.length) {
+    voices = speechSynthesis.getVoices();
+  }
+
+  return (
+    voices.find(v => /female|zira|susan|samantha/i.test(v.name)) ||
+    voices[0] ||
+    null
+  );
+}
+
+function speak(bossName, minutes) {
+  if (!window.speechSynthesis) return;
+
+  let text;
+
+  if (minutes === 0) {
+    text = `${bossName}, is spawning now! Let's go!`;
+  } else {
+    text = `${bossName} will spawn in ${minutes} minute${minutes === 1 ? "" : "s"}, let's go!`;
+  }
+
+  const msg = new SpeechSynthesisUtterance(text);
+
+  const voice = getVoice();
+  if (voice) msg.voice = voice;
+
+  speechSynthesis.cancel();
+  speechSynthesis.speak(msg);
+}
+
+function setFilter(f) {
+  filter = f;
+  document.querySelectorAll(".filters button").forEach(b=>b.classList.remove("active"));
+  event.target.classList.add("active");
+  render();
+}
+
+function cleanInput(text) {
+  return text
+    // Normalize Windows/Mac line endings
+    .replace(/\r\n/g, "\n")
+    // Remove emoji markers (any amount)
+    .replace(/[🔴🟡🔵🟢]+/g, "")
+    // Remove other symbols but KEEP newlines
+    .replace(/[^a-zA-Z0-9:\n\s]/g, "")
+    // Recognize blank lines properly
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+function isAlarmAllowed(boss) {
+  if (filter === "all") return true;
+  if (filter === "ffa") return ffaBosses.includes(boss.norm);
+  if (filter === "nc") return notCounted.includes(boss.norm);
+  return true;
+}
+
+function start() {
+  localStorage.setItem(CACHE_KEY, document.getElementById("input").value);
+
+  bosses = [];
+  const rawInput = document.getElementById("input").value;
+  
+  // CLEAN THE INPUT FIRST
+  const cleanedInput = cleanInput(rawInput);
+
+  const lines = cleanedInput
+    .split("\n")
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  for (let i = 0; i < lines.length; i++) {
+    // Look ONLY for time lines
+    if (/\d{1,2}:\d{2}/.test(lines[i])) {
+      const timeMatch = lines[i].match(/(\d{2}:\d{2})/);
+      const percentMatch = lines[i].match(/\b(100|50|33)\b/);
+      const percent = percentMatch ? `${percentMatch[1]}%` : null;
+      if (!timeMatch) continue;
+
+      // Walk backwards to find the boss name
+      let bossName = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if (!lines[j].toUpperCase().includes("SPAWNING")) {
+            bossName = lines[j];
+            break;
+        }
+      }
+
+      if (!bossName) continue;
+
+      const [h, m] = timeMatch[1].split(":").map(Number);
+      const spawn = new Date();
+      spawn.setHours(h, m, 0, 0);
+      if (spawn < new Date()) spawn.setDate(spawn.getDate() + 1);
+
+      bosses.push({
+        name: bossName,
+        percent,
+        norm: normalize(bossName),
+        spawn,
+        alarm5: false,
+        alarm1: false,
+        alarmNow: false
+      });
+    }
+  }
+
+  if (!timerStarted) {
+    setInterval(update, 1000);
+    timerStarted = true;
+  }
+
+  update();
+}
+
+
+function update() {
+  const now = new Date();
+  bosses = bosses.filter(b => (b.spawn.getTime() + 60000) > now.getTime());
+
+  bosses.forEach(b=>{
+    const diff = (b.spawn - now) / 60000;
+    const minutes = Math.max(0, Math.ceil(diff));
+
+     // 🔇 Skip alarm if boss is not in active filter
+    if (!isAlarmAllowed(b)) return;
+    
+    if (minutes <= 5 && !b.alarm5) {
+      speak(b.name, minutes);
+      b.alarm5 = true;
+    }
+
+    if (minutes <= 1 && !b.alarm1) {
+      speak(b.name, minutes);
+      b.alarm1 = true;
+    }
+
+    // 🔥 Spawn NOW alarm (only once)
+    if (minutes === 0 && !b.alarmNow) {
+      speak(`${b.name}`, 0);
+      b.alarmNow = true;
+    }
+  });
+
+  bosses.sort((a,b)=>a.spawn-b.spawn);
+  render();
+}
+
+function formatCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
+  }
+
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+function render() {
+  const grid=document.getElementById("grid");
+  grid.innerHTML="";
+
+  bosses.filter(b=>{
+    if (filter === "ffa") return ffaBosses.includes(b.norm);
+    if (filter === "nc") return notCounted.includes(b.norm);
+    return true;
+  }).forEach(b=>{
+    const diff = Math.max(0, b.spawn - new Date());
+    const totalMinutes = Math.ceil(diff / 60000);
+
+    let cls = "", txt = "";
+    if (totalMinutes <= 1) cls = "warn1", txt = "🚨";
+    else if (totalMinutes <= 5) cls = "warn5", txt = "🔔";
+
+    const timeText = formatCountdown(diff);
+
+    let typeClass = "boss-other";
+
+    if (ffaBosses.includes(b.norm)) typeClass = "boss-ffa";
+    else if (notCounted.includes(b.norm)) typeClass = "boss-nc";
+
+    const card=document.createElement("div");
+    card.className = `card frost ${typeClass}`;
+    card.innerHTML = `
+      <h3>${b.name}</h3>
+      <div class="spawn-time">
+        ${b.spawn.toLocaleTimeString()}${b.percent ? ` - (${b.percent})` : ""}
+      </div>
+      <div class="countdown ${cls}">
+        ${txt} ${timeText}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function normalize(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim();
+}
+
+</script>
+
+</body>
+</html>
