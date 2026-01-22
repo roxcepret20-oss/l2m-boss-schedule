@@ -201,7 +201,8 @@ async function loadSchedule() {
     .from("boss_schedule")
     .select("content")
     .limit(1);
-
+  console.log("inside load schedule");
+  console.log(data)
   return data[0]?.content || "";
 }
 /* END DATABASE */
