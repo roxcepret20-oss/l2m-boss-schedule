@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0d0d">
 <title>Cepret Bossing</title>
 
 <style>
@@ -158,6 +160,10 @@ button {
 <div class="grid" id="grid"></div>
 
 <script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+
 window.addEventListener("load", () => {
   const cached = localStorage.getItem(CACHE_KEY);
   if (cached) {
@@ -165,6 +171,32 @@ window.addEventListener("load", () => {
     start(); 
   }
 });
+
+async function requestNotificationPermission() {
+  if (!("Notification" in window)) return;
+
+  if (Notification.permission === "default") {
+    await Notification.requestPermission();
+  }
+}
+
+function notifyBoss(title, body) {
+  if (Notification.permission !== "granted") return;
+
+  navigator.serviceWorker.ready.then(reg => {
+    reg.showNotification(title, {
+      body,
+      icon: "icon-192.png",
+      badge: "icon-192.png",
+      vibrate: [200, 100, 200]
+    });
+  });
+}
+
+function isMobile() {
+  return /android|iphone|ipad/i.test(navigator.userAgent);
+}
+
 const CACHE_KEY = "l2m_boss_input";
 const ffaBosses = [
 "Dragon Beast","Orfen","Samuel","Mirror of Oblivion","Hisilrome",
@@ -199,6 +231,7 @@ function getVoice() {
 }
 
 function speak(bossName, minutes) {
+  if (isMobile()) return;
   if (!window.speechSynthesis) return;
 
   let text;
@@ -246,6 +279,8 @@ function isAlarmAllowed(boss) {
 }
 
 function start() {
+  requestNotificationPermission();
+
   localStorage.setItem(CACHE_KEY, document.getElementById("input").value);
 
   bosses = [];
@@ -316,6 +351,7 @@ function update() {
     if (!isAlarmAllowed(b)) return;
     
     if (minutes <= 5 && !b.alarm5) {
+      notifyBoss("🔔 Boss Alert", `${b.name} will spawn in ${minutes} minutes`);
       speak(b.name, minutes);
       b.alarm5 = true;
     }
