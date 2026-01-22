@@ -215,7 +215,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const saved = await loadSchedule();
   if (saved) {
     document.getElementById("input").value = saved;
-    parse(saved);
+    start();
   }
 });
 
