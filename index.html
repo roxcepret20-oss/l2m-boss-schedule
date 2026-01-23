@@ -571,7 +571,7 @@ function render() {
         <div class="spawn-time event-time">
           ${b.spawn.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </div>
-        <div class="event-countdown" id="cd-${i}"></div>
+        <div class="event-countdown" id="cd-${txt} ${timeText}"></div>
       `;
     } else {
       card.innerHTML = `
