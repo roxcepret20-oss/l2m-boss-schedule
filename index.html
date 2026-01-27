@@ -360,16 +360,20 @@ function getVoice() {
   );
 }
 
-function sendDiscordNotification(bossName) {
+/* curl -X POST https://cepret-l2m-webhook.vercel.app/api/notify-boss ^
+  -H "Content-Type: application/json" ^
+  -H "x-secret: l2m-secret-bosstime" ^
+  -d "{\"msg\":\"Queen Ant will spawn at 5 minutes!\"}" */
+
+function sendDiscordNotification(msg) {
   fetch('https://cepret-l2m-webhook.vercel.app/api/notify-boss', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-secret': 'YOUR_SECRET'
+      'x-secret': 'l2m-secret-bosstime'
     },
     body: JSON.stringify({
-      bossName,
-      spawnTime: 'Now'
+      msg: msg
     })
   }).catch(err => {
     console.error('Discord notify failed', err);
@@ -515,8 +519,11 @@ function update() {
     if (!isAlarmAllowed(b)) return;
     
     if (minutes <= 5 && !b.alarm5) {
-      sendDiscordNotification(b.name);
-      notifyBoss("🔔 Boss Alert", `${b.name} will spawn in ${minutes} minutes`);
+      const msg = `${b.name} will spawn in ${minutes} minutes`;
+
+      sendDiscordNotification(msg);
+      notifyBoss("🔔 Boss Alert", `${msg}`);
+      
       speak(b.name, minutes);
       b.alarm5 = true;
     }
