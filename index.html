@@ -360,6 +360,22 @@ function getVoice() {
   );
 }
 
+function sendDiscordNotification(bossName) {
+  fetch('https://cepret-l2m-webhook.vercel.app/api/notify-boss', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-secret': 'YOUR_SECRET'
+    },
+    body: JSON.stringify({
+      bossName,
+      spawnTime: 'Now'
+    })
+  }).catch(err => {
+    console.error('Discord notify failed', err);
+  });
+}
+
 function speak(bossName, minutes) {
   if (isMobile()) return;
   if (!window.speechSynthesis) return;
@@ -499,6 +515,7 @@ function update() {
     if (!isAlarmAllowed(b)) return;
     
     if (minutes <= 5 && !b.alarm5) {
+      sendDiscordNotification(b.name);
       notifyBoss("🔔 Boss Alert", `${b.name} will spawn in ${minutes} minutes`);
       speak(b.name, minutes);
       b.alarm5 = true;
