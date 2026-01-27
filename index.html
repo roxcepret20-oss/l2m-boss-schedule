@@ -518,7 +518,7 @@ function update() {
      // 🔇 Skip alarm if boss is not in active filter
     if (!isAlarmAllowed(b)) return;
     
-    if (minutes <= 5 && !b.alarm5) {
+    if (minutes <= 19 && !b.alarm5) {
       const msg = `${b.name} will spawn in ${minutes} minutes`;
 
       sendDiscordNotification(msg);
