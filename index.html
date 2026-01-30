@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
   const saved = await loadSchedule();
   if (saved) {
     document.getElementById("input").value = saved;
