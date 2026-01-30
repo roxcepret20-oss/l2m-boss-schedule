@@ -447,30 +447,32 @@ function parseInvasion(text) {
     .filter(Boolean);
 
   const result = [];
-  const now = new Date();
 
   for (let i = 0; i < lines.length; i++) {
-    // Spawn countdown: HH:MM:SS
+    // Look for countdown line like 00:16:56
     if (/^\d{2}:\d{2}:\d{2}$/.test(lines[i])) {
-      const [hh, mm, ss] = lines[i].split(":").map(Number);
+      // Next line should be: Next: 17:46
+      const nextLine = lines[i + 1] || "";
+      const timeMatch = nextLine.match(/(\d{2}:\d{2})/);
+      if (!timeMatch) continue;
 
-      // Find boss name: line before "Respawn:"
+      // Walk backwards to find boss name
       let bossName = null;
       for (let j = i - 1; j >= 0; j--) {
-        if (lines[j].startsWith("Respawn")) {
-          bossName = lines[j - 1];
+        if (!lines[j].includes("Chance") &&
+            !lines[j].includes("Respawn") &&
+            !lines[j].includes("Killed")) {
+          bossName = lines[j];
           break;
         }
       }
 
       if (!bossName) continue;
 
-      const spawn = new Date(
-        now.getTime() +
-        hh * 3600000 +
-        mm * 60000 +
-        ss * 1000
-      );
+      const [h, m] = timeMatch[1].split(":").map(Number);
+      const spawn = new Date();
+      spawn.setHours(h, m, 0, 0);
+      if (spawn < new Date()) spawn.setDate(spawn.getDate() + 1);
 
       result.push({
         name: bossName,
