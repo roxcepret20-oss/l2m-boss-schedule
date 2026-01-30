@@ -294,10 +294,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 window.addEventListener("load", () => {
-  const cached = localStorage.getItem(CACHE_KEY);
-  if (cached) {
-    document.getElementById("input").value = cached;
-    start(); 
+  const saved = await loadSchedule();
+  if (saved) {
+    document.getElementById("input").value = saved;
+    start();
   }
 });
 
