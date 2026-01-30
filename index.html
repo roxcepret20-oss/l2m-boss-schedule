@@ -133,6 +133,19 @@ button {
   );
 }
 
+/* Invasion */
+.card.boss-invasion {
+  border: 1px solid rgba(180, 120, 255, 0.65);
+  box-shadow:
+    0 0 26px rgba(180, 120, 255, 0.55),
+    0 12px 38px rgba(0, 0, 0, 0.8);
+  background: linear-gradient(
+    135deg,
+    rgba(180, 120, 255, 0.18),
+    rgba(90, 40, 160, 0.05)
+  );
+}
+
 .card h3 {
   margin: 0 0 16px; /* Boss name → spawn time */
 }
@@ -174,6 +187,9 @@ button {
 <h1>⚔️ Lineage2M Boss Alarm</h1>
 
 <textarea id="input" placeholder="Paste boss list here..."></textarea><br>
+
+<h3 style="margin-top:20px;">🟣 Invasion Boss</h3>
+<textarea id="invasionInput" placeholder="Paste invasion boss info here..."></textarea><br>
 <button onclick="start()">Parse & Start</button>
 
 <div class="filters">
@@ -421,6 +437,57 @@ function cleanInput(text) {
     .trim();
 }
 
+function parseInvasion(text) {
+  if (!text.trim()) return [];
+
+  const lines = text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  const result = [];
+  const now = new Date();
+
+  for (let i = 0; i < lines.length; i++) {
+    // Spawn countdown: HH:MM:SS
+    if (/^\d{2}:\d{2}:\d{2}$/.test(lines[i])) {
+      const [hh, mm, ss] = lines[i].split(":").map(Number);
+
+      // Find boss name: line before "Respawn:"
+      let bossName = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if (lines[j].startsWith("Respawn")) {
+          bossName = lines[j - 1];
+          break;
+        }
+      }
+
+      if (!bossName) continue;
+
+      const spawn = new Date(
+        now.getTime() +
+        hh * 3600000 +
+        mm * 60000 +
+        ss * 1000
+      );
+
+      result.push({
+        name: bossName,
+        norm: normalize(bossName),
+        spawn,
+        invasion: true,
+        alarm5: false,
+        alarm1: false,
+        alarmNow: false
+      });
+    }
+  }
+
+  return result;
+}
+
+
 function isAlarmAllowed(boss) {
   if (filter === "all") return true;
   if (filter === "ffa") return ffaBosses.includes(boss.norm);
@@ -497,6 +564,11 @@ function start() {
       });
     });
   });
+
+  // 🟣 INVASION BOSSES
+  const invasionText = document.getElementById("invasionInput").value;
+  const invasionBosses = parseInvasion(invasionText);
+  bosses.push(...invasionBosses);
 
   if (!timerStarted) {
     setInterval(update, 1000);
@@ -584,6 +656,7 @@ function render() {
     let typeClass = "boss-other";
 
     if (b.type === "event") typeClass = "event";
+    else if (b.invasion) typeClass = "boss-invasion";
     else if (ffaBosses.includes(b.norm)) typeClass = "boss-ffa";
     else if (notCounted.includes(b.norm)) typeClass = "boss-nc";
 
