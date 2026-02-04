@@ -274,6 +274,38 @@ let filter = "all";
 let timerStarted = false; 
 let voices = [];
 
+/* INVASION DATABASE */
+async function saveInvasionSchedule(text) {
+  const { error } = await sb
+    .from("invasion_boss_schedule")
+    .upsert(
+      {
+        id: 1,
+        content: text,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: "id" }
+    );
+
+  if (error) console.error("Save invasion failed:", error);
+}
+
+async function loadInvasionSchedule() {
+  const { data, error } = await sb
+    .from("invasion_boss_schedule")
+    .select("content")
+    .eq("id", 1)
+    .single();
+
+  if (error) {
+    console.error("Load invasion failed:", error);
+    return "";
+  }
+
+  return data?.content || "";
+}
+/* END INVASION DATABASE */
+
 /* DATABASE */
 async function saveSchedule(text) {
   const { error } = await sb
@@ -305,16 +337,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   const saved = await loadSchedule();
   if (saved) {
     document.getElementById("input").value = saved;
-    start();
   }
+
+  const invasionSaved = await loadInvasionSchedule();
+  if (invasionSaved) {
+    document.getElementById("invasionInput").value = invasionSaved;
+  }
+
+  if (saved || invasionSaved) start();
 });
 
 window.addEventListener("load", async () => {
   const saved = await loadSchedule();
   if (saved) {
     document.getElementById("input").value = saved;
-    start();
   }
+
+  const invasionSaved = await loadInvasionSchedule();
+  if (invasionSaved) {
+    document.getElementById("invasionInput").value = invasionSaved;
+  }
+
+  if (saved || invasionSaved) start();
 });
 
 async function requestNotificationPermission() {
@@ -569,6 +613,7 @@ function start() {
 
   // 🟣 INVASION BOSSES
   const invasionText = document.getElementById("invasionInput").value;
+  saveInvasionSchedule(invasionText);
   const invasionBosses = parseInvasion(invasionText);
   bosses.push(...invasionBosses);
 
