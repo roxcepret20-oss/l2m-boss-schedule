@@ -190,7 +190,7 @@ button {
 
 <h3 style="margin-top:20px;">🟣 Invasion Boss</h3>
 <textarea id="invasionInput" placeholder="Paste invasion boss info here..."></textarea><br>
-<button onclick="start()">Parse & Start</button>
+<button onclick="protectedStart()">Parse & Start</button>
 
 <div class="filters">
   <button class="active" onclick="setFilter('all')">All</button>
@@ -541,6 +541,17 @@ function isAlarmAllowed(boss) {
   return true;
 }
 
+function protectedStart() {
+  const pwd = prompt("Enter update password:");
+
+  if (pwd !== "6969") {
+    alert("❌ Wrong password");
+    return;
+  }
+
+  start();
+}
+
 function start() {
   requestNotificationPermission();
 
@@ -613,7 +624,7 @@ function start() {
 
   // 🟣 INVASION BOSSES
   const invasionText = document.getElementById("invasionInput").value;
-  saveInvasionSchedule(invasionText);
+  
   const invasionBosses = parseInvasion(invasionText);
   bosses.push(...invasionBosses);
 
