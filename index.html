@@ -624,7 +624,7 @@ function start() {
 
   // 🟣 INVASION BOSSES
   const invasionText = document.getElementById("invasionInput").value;
-  
+  saveInvasionSchedule(invasionText);
   const invasionBosses = parseInvasion(invasionText);
   bosses.push(...invasionBosses);
 
