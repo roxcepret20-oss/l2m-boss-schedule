@@ -552,6 +552,21 @@ function protectedStart() {
   start();
 }
 
+function parseBosses(text) {
+  return text
+    .trim()
+    .split("\n")
+    .map(line => {
+      const parts = line.split("\t");
+
+      return {
+        bossName: parts[3],
+        spawnTime: parts[7]
+      };
+    })
+    .filter(boss => boss.bossName && boss.spawnTime);
+}
+
 function start() {
   requestNotificationPermission();
 
@@ -568,42 +583,64 @@ function start() {
     .split("\n")
     .map(l => l.trim())
     .filter(Boolean);
+    
+  const parsedBosses = parseBosses(rawInput);
 
-  for (let i = 0; i < lines.length; i++) {
-    // Look ONLY for time lines
-    if (/\d{1,2}:\d{2}/.test(lines[i])) {
-      const timeMatch = lines[i].match(/(\d{2}:\d{2})/);
-      const percentMatch = lines[i].match(/\b(100|50|33)\b/);
-      const percent = percentMatch ? `${percentMatch[1]}%` : null;
-      if (!timeMatch) continue;
+  parsedBosses.forEach(element => {
+    const timeMatch = element.spawnTime.match(/(\d{2}:\d{2})/);
+    const [h, m] = timeMatch[1].split(":").map(Number);
 
-      // Walk backwards to find the boss name
-      let bossName = null;
-      for (let j = i - 1; j >= 0; j--) {
-        if (!lines[j].toUpperCase().includes("SPAWNING")) {
-            bossName = lines[j];
-            break;
-        }
-      }
+    const spawn = new Date();
+    spawn.setHours(h, m, 0, 0);
 
-      if (!bossName) continue;
+    if (spawn < new Date()) spawn.setDate(spawn.getDate() + 1);
 
-      const [h, m] = timeMatch[1].split(":").map(Number);
-      const spawn = new Date();
-      spawn.setHours(h, m, 0, 0);
-      if (spawn < new Date()) spawn.setDate(spawn.getDate() + 1);
+    bosses.push({
+      name: element.bossName,
+      percent: null,
+      norm: normalize(element.bossName),
+      spawn,
+      alarm5: false,
+      alarm1: false,
+      alarmNow: false
+    });
+  });
 
-      bosses.push({
-        name: bossName,
-        percent,
-        norm: normalize(bossName),
-        spawn,
-        alarm5: false,
-        alarm1: false,
-        alarmNow: false
-      });
-    }
-  }
+  // for (let i = 0; i < lines.length; i++) {
+  //   // Look ONLY for time lines
+  //   if (/\d{1,2}:\d{2}/.test(lines[i])) {
+  //     const timeMatch = lines[i].match(/(\d{2}:\d{2})/);
+  //     const percentMatch = lines[i].match(/\b(100|50|33)\b/);
+  //     const percent = percentMatch ? `${percentMatch[1]}%` : null;
+  //     if (!timeMatch) continue;
+
+  //     // Walk backwards to find the boss name
+  //     let bossName = null;
+  //     for (let j = i - 1; j >= 0; j--) {
+  //       if (!lines[j].toUpperCase().includes("SPAWNING")) {
+  //           bossName = lines[j];
+  //           break;
+  //       }
+  //     }
+
+  //     if (!bossName) continue;
+
+  //     const [h, m] = timeMatch[1].split(":").map(Number);
+  //     const spawn = new Date();
+  //     spawn.setHours(h, m, 0, 0);
+  //     if (spawn < new Date()) spawn.setDate(spawn.getDate() + 1);
+
+  //     bosses.push({
+  //       name: bossName,
+  //       percent,
+  //       norm: normalize(bossName),
+  //       spawn,
+  //       alarm5: false,
+  //       alarm1: false,
+  //       alarmNow: false
+  //     });
+  //   }
+  // }
 
   EVENT_SCHEDULE.forEach(evt => {
     evt.times.forEach(t => {
@@ -635,7 +672,6 @@ function start() {
 
   update();
 }
-
 
 function update() {
   const now = new Date();
